@@ -1,0 +1,115 @@
+package com.techg.spring.controllers;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.StreamUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.techg.spring.config.AppConstants;
+import com.techg.spring.payload.ApiResponse;
+import com.techg.spring.payload.PagnationResponse;
+import com.techg.spring.payload.ProductDto;
+import com.techg.spring.services.FileService;
+import com.techg.spring.services.ProductService;
+
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+
+@RequestMapping("techg/api/")                       
+@RestController
+public class ProductController {
+   
+	@Autowired
+	private ProductService productService ; 
+	
+	@Autowired
+	private FileService fileService ;
+	
+	@Value("${project.image}")
+	private String path;
+	
+	@GetMapping("/auth/getAllProduct")
+	public ResponseEntity<PagnationResponse> getAllCertificates(@RequestParam(value = "pageNumber" ,defaultValue = AppConstants.DEFAULT_PAGE_NUMBER ,required = false) Integer pageNumber ,
+			 @RequestParam(value = "pageSize" ,defaultValue = AppConstants.DEFAULT_PAGE_SIZE ,required = false) Integer pageSize ,
+			 @RequestParam(value = "sortBy" ,defaultValue = AppConstants.DEFAULT_SORT_BY ,required = false) String sortBy ,
+			 @RequestParam(value = "sortDir" ,defaultValue = AppConstants.DEFAULT_SORT_DIR ,required = false) String sortDir){
+		
+		PagnationResponse posts= productService.getAllProducts(pageNumber,pageSize ,sortBy,sortDir);
+		return new ResponseEntity<PagnationResponse>(posts,HttpStatus.OK);
+	}
+	
+	@PostMapping("admin/createProduct")
+	public ResponseEntity<ProductDto> cretaeProduct(@Valid @RequestBody ProductDto productDto ,@RequestParam(name = "cid") Integer cid){
+		System.out.println("---aaaaa----" + productDto);
+		System.out.println("---ccccc---" + cid);
+		ProductDto productDto2 = productService.createProduct(productDto,cid);
+		return new ResponseEntity<ProductDto>(productDto2 ,HttpStatus.CREATED);              
+		
+	}
+	@PostMapping("admin/updateProduct")
+	public ResponseEntity<ProductDto> updateProduct(@Valid @RequestBody ProductDto productDto ,@RequestParam(name = "pid") Integer pid){
+		
+		ProductDto productDto2 = productService.updateProductWithImageName(productDto ,pid);
+		return new ResponseEntity<ProductDto>(productDto2 ,HttpStatus.CREATED);              
+		
+	}
+	@PostMapping("post/addtocart")
+	public ResponseEntity<ApiResponse> addToCart(@RequestParam(name = "uid") Integer uid , @RequestParam(name = "pid") Integer pid){
+		
+		ApiResponse productDto2 = productService.addToCart(uid, pid);
+		return new ResponseEntity<ApiResponse>(productDto2 ,HttpStatus.CREATED);              
+		
+	}
+	
+	@PostMapping("post/removefromcart")
+	public ResponseEntity<ApiResponse> removeFromCart(@RequestParam(name = "uid") Integer uid , @RequestParam(name = "pid") Integer pid){
+		
+		ApiResponse productDto2 = productService.removeFromCart(uid, pid);
+		return new ResponseEntity<ApiResponse>(productDto2 ,HttpStatus.CREATED);              
+		
+	}
+	@PostMapping("post/incprodqty")
+	public ResponseEntity<ApiResponse> incProdQty(@RequestParam(name = "uid") Integer uid , @RequestParam(name = "pid") Integer pid){
+		
+		ApiResponse productDto2 = productService.incProdQty(uid, pid);
+		return new ResponseEntity<ApiResponse>(productDto2 ,HttpStatus.CREATED);              
+		
+	}
+	@PostMapping("post/decprodqty")
+	public ResponseEntity<ApiResponse> decProdQty(@RequestParam(name = "uid") Integer uid , @RequestParam(name = "pid") Integer pid){
+		
+		ApiResponse productDto2 = productService.decProdQty(uid, pid);
+		return new ResponseEntity<ApiResponse>(productDto2 ,HttpStatus.CREATED);              
+		
+	}
+	
+	  //post image upload
+			@PostMapping("admin/uploadProdImage")
+			public ResponseEntity<ProductDto> uploadImage(@RequestParam("pid") Integer pid , @RequestParam("image") MultipartFile image ) throws IOException{
+			ProductDto productDto = productService.getProductById(pid);
+			String fileName = fileService.uploadImage(path, image); 
+			productDto.setImageName(fileName);
+			ProductDto updatePost = productService.updateProductWithImageName(productDto, pid);
+			return new ResponseEntity<ProductDto>(updatePost,HttpStatus.OK);
+			}
+			
+			@GetMapping(value = "auth/getproductImage", produces = MediaType.IMAGE_JPEG_VALUE)
+			public void downloadImage(@RequestParam("imageName") String imageName ,HttpServletResponse response) throws IOException {
+				InputStream resource = fileService.getResource(path, imageName);
+				response.setContentType(MediaType.IMAGE_JPEG_VALUE);	
+				StreamUtils.copy(resource ,response.getOutputStream());
+			}
+	
+}

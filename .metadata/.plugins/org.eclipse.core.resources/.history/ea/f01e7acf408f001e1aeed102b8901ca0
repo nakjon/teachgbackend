@@ -1,0 +1,5 @@
+package com.techg.spring.payload;
+
+public class OptionValue {
+
+}
